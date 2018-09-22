@@ -24,6 +24,8 @@ systemctl start docker.service;systemctl enable docker.service
 kubeadm init --apiserver-advertise-address=192.168.56.101 --pod-network-cidr=192.168.0.0/16
 
 
+To recover lost join command - kubeadm token create --print-join-command
+
 kubectl get pods -o wide --all-namespaces
 
 kubectl apply -f https://docs.projectcalico.org/v3.1/getting-started/kubernetes/installation/hosted/rbac-kdd.yaml
@@ -95,7 +97,7 @@ get svc nginx
 
 RR upgrade
 
-kubectl set image deployment nginx nginx=hshar/httpd
+kubectl set image deployment nginx-deployment nginx=hshar/httpd
 
 
 Ref:
