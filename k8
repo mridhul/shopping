@@ -1,0 +1,103 @@
+sudo apt-get update && apt-get install -y openssh-server docker.io
+
+apt-get update && apt-get install -y apt-transport-https curl
+
+
+curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+
+cat <<EOF >/etc/apt/sources.list.d/kubernetes.list
+deb http://apt.kubernetes.io/ kubernetes-xenial main
+EOF
+
+
+apt-get update && apt-get install -y kubelet kubeadm kubectl
+
+vim.tiny  /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+
+Environment=”cgroup-driver=systemd/cgroup-driver=cgroupfs”
+
+reboot
+
+>>> ON kMASTER
+systemctl start docker.service;systemctl enable docker.service
+
+kubeadm init --apiserver-advertise-address=192.168.56.101 --pod-network-cidr=192.168.0.0/16
+
+
+kubectl get pods -o wide --all-namespaces
+
+kubectl apply -f https://docs.projectcalico.org/v3.1/getting-started/kubernetes/installation/hosted/rbac-kdd.yaml
+kubectl apply -f https://docs.projectcalico.org/v3.1/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/1.7/calico.yaml
+
+kubectl create -f https://raw.githubusercontent.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml
+
+
+
+
+kubectl -n kube-system edit service kubernetes-dashboard
+Change type: ClusterIP to type: NodePort
+ kubectl -n kube-system get service kubernetes-dashboard
+ 
+ 
+  kubectl create serviceaccount dashboard -n default
+  kubectl create clusterrolebinding dashboard-admin -n default \
+  --clusterrole=cluster-admin \
+  --serviceaccount=default:dashboard
+  
+  kubectl get secret $(kubectl get serviceaccount dashboard -o jsonpath="{.secrets[0].name}") -o jsonpath="{.data.token}" | base64 --decode
+  
+  
+
+http://192.168.56.101:30307/api/v1/namespaces/kube-system/services/https:kubernetes-dashboard:/proxy/
+
+
+
+Deployment
+-----------------------------------------
+apiVersion: apps/v1 # for versions before 1.9.0 use apps/v1beta2
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  replicas: 2 # tells deployment to run 2 pods matching the template
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.7.9
+        ports:
+        - containerPort: 80
+
+--------------------------------------
+kubectl describe deployment nginx-deployment
+kubectl describe pod
+kubectl get pods -l app=nginx
+
+> Port change
+> increase replicas
+
+
+kubectl delete deployment nginx-deployment
+
+
+Service
+
+kubectl create service nodeport nginx --tcp=80:80
+
+get svc nginx
+
+
+RR upgrade
+
+kubectl set image deployment nginx nginx=hshar/httpd
+
+
+Ref:
+https://github.com/kubernetes/dashboard/wiki/Accessing-Dashboard---1.7.X-and-above
+https://kubernetes.io/docs/tasks/run-application/run-stateless-application-deployment/
